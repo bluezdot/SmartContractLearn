@@ -1,0 +1,21 @@
+Sử dụng contract MyToken
+ĐỊA CHỈ 1:
+// la - 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
+// lacoin (ERC20) - 0xd9145CCE52D386f254917e481eB44e9943F39138
+
+ĐỊA CHỈ 2:
+// be - 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+// becoin (ERC20) - 0xa131AD247055FD2e2aA8b156A11bdEc81b9eAD95
+
+// la thiết lập TokenSwap 10lacoin = 30becoin
+// ĐỊA CHỈ SmartContract: 0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8
+// la,be approve
+
+
+TRẠNG THÁI BAN ĐẦU:
+la: 100 lacoin - 0 becoin
+be: 0 lacoin - 100becoin
+
+TRẠNG THÁI SAU:
+la: 90lacoin - 30becoin
+be: 10lacoin - 70becoin
