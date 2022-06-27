@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.0.0/contracts/token/ERC20/IERC20.sol";
+import "hardhat/console.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract TokenSwap {
     IERC20 public token1;
@@ -28,6 +29,9 @@ contract TokenSwap {
     }
 
     function swap() public {
+        // console.log("Address offer to make a swap: ", msg.sender);
+        // console.log("Trying to swap an amount of ", amount1, token1, "to ", amount2, token2);
+
         require(msg.sender == owner1 || msg.sender == owner2, "Not authorized");
         require(
             token1.allowance(owner1, address(this)) >= amount1,
