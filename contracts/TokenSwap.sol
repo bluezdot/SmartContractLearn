@@ -1,50 +1,91 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+// import "hardhat/console.sol";
 
 contract TokenSwap {
-    IERC20 public token1;
+    using SafeMath for uint;
+    uint public balance;
+    
+    // Ques: IERC20 ? native token thì sao
+    // Ans: Khai báo là address, nếu là native token/IERC20 thì ép kiểu sau 
+    address public token1;
+    address public token2;
+    // Ques: owner2 của token2 đâu ?
+    // Ans: Chỉ có owner1, swap trực tiếp với smartcontract
     address public owner1;
-    uint public amount1;
-    IERC20 public token2;
-    address public owner2;
-    uint public amount2;
-
-    constructor(
-        address _token1,
-        address _owner1,
-        uint _amount1,
-        address _token2,
-        address _owner2,
-        uint _amount2
-    ) {
-        token1 = IERC20(_token1);
-        owner1 = _owner1;
-        amount1 = _amount1;
-        token2 = IERC20(_token2);
-        owner2 = _owner2;
-        amount2 = _amount2;
+    address public scowner;
+    // Ques: Làm sao để lưu rate thập phân ?
+    // Ans: Sử dụng struct, để tạo được tỉ lệ chia nhỏ hơn của rate 
+    struct Rate {
+        uint numerator;
+        uint denominator;
     }
 
-    function swap() public {
-        // console.log("Address offer to make a swap: ", msg.sender);
-        // console.log("Trying to swap an amount of ", amount1, token1, "to ", amount2, token2);
+    Rate public swapRate;
 
-        require(msg.sender == owner1 || msg.sender == owner2, "Not authorized");
-        require(
-            token1.allowance(owner1, address(this)) >= amount1,
-            "Token 1 allowance too low"
-        );
-        require(
-            token2.allowance(owner2, address(this)) >= amount2,
-            "Token 2 allowance too low"
-        );
-
-        _safeTransferFrom(token1, owner1, owner2, amount1);
-        _safeTransferFrom(token2, owner2, owner1, amount2);
+    event TransferReceived(address _from, uint _amount);
+    constructor()
+        public {
+            // Rate mặc định là 1:1
+            swapRate = Rate(1,1); 
+            scowner = msg.sender;
+            // Ques: Tại sao không khởi tạo token1, token2, owner1 ở đây ?
+            // Ans: Truyền thẳng vào hàm swap, để có thể thay đổi cặp swap, và có thể swap 2 chiều
     }
+
+    function setRate(Rate calldata _rate) external {
+        // Chỉ cho phép smartcontract owner thay đổi swapRate
+        require(msg.sender == scowner, "Not authorized");
+        swapRate.numerator = _rate.numerator;
+        swapRate.denominator = _rate.denominator;
+    }
+
+    // Nhận Native token chuyển vào
+    receive() external payable {
+        balance += msg.value;
+        emit TransferReceived(msg.sender, msg.value);
+    }
+    fallback() external payable {}
+
+    // Nhận ERC20 token chuyển vào
+    function receiveERC20(IERC20 token, uint amount) external {
+        _safeTransferFrom(IERC20 (token), msg.sender, address(this), amount);
+    }
+
+    function swap(
+        address _tokenIn,
+        uint _amountIn,
+        address _tokenOut
+    ) public {
+        require(_tokenIn != _tokenOut, "Can not swap a token with itself");
+        uint _amountOut = _amountIn * swapRate.numerator / swapRate.denominator;
+
+        // KIỂM TRA NATIVE TOKEN HAY KHÔNG
+        if (_tokenIn == address(0)) {
+            // Chuyển native từ address -> smartcontract
+            // Chuyển token từ smartcontract -> address
+            send(payable(msg.sender), _amountIn);
+            _safeTransferFrom(IERC20 (_tokenOut), address(this), msg.sender, _amountOut);
+        } else if (_tokenOut == address(0)) {
+            // Chuyển token từ address -> smartcontract
+            // Chuyển native từ smartcontract -> address
+            _safeTransferFrom(IERC20 (_tokenIn), msg.sender, address(this), _amountIn);
+            payable(msg.sender).transfer(address(this).balance);
+        } else {
+            // Chuyển token1 từ address -> smartcontract
+            // Chuyển token2 từ smartcontract -> address
+            _safeTransferFrom(IERC20 (_tokenIn), msg.sender, address(this), _amountIn);
+            _safeTransferFrom(IERC20 (_tokenOut), address(this), msg.sender, _amountOut);
+        }
+    }
+
+    function send(address payable _to, uint amount) public payable {
+            (bool sent, bytes memory data) = _to.call{value: amount}("");
+            require(sent, "Failed to send Ether");
+        }
 
     function _safeTransferFrom(
         IERC20 token,
@@ -56,16 +97,3 @@ contract TokenSwap {
         require(sent, "Token transfer failed");
     }
 }
-
-// la
-// 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
-// lacoin
-// 0xd9145CCE52D386f254917e481eB44e9943F39138
-
-// be
-// 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
-// becoin
-// 0xa131AD247055FD2e2aA8b156A11bdEc81b9eAD95,
-
-// token swap
-// 0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8
